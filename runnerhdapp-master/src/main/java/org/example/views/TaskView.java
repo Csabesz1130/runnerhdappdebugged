@@ -1,6 +1,6 @@
 package org.example.views;
 
-import org.example.controllers.TaskController;
+import org.example.controllers.CompanyController;
 import org.example.models.Company;
 
 import javax.swing.*;
@@ -9,7 +9,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
 public class TaskView extends JPanel {
-    private TaskController taskController;
+    private CompanyController companyController;
     private Company company;
 
     private JLabel telephelyLabel;
@@ -18,8 +18,8 @@ public class TaskView extends JPanel {
     private JTextArea megjegyzesTextArea;
     private JButton frissitesButton;
 
-    public TaskView(TaskController taskController, Company company) {
-        this.taskController = taskController;
+    public TaskView(CompanyController companyController, Company company) {
+        this.companyController = companyController;
         this.company = company;
         initComponents();
     }
@@ -49,7 +49,7 @@ public class TaskView extends JPanel {
             public void actionPerformed(ActionEvent e) {
                 String ujStatusz = (String) statuszComboBox.getSelectedItem();
                 String megjegyzes = megjegyzesTextArea.getText();
-                taskController.updateTask(company, ujStatusz, megjegyzes);
+                companyController.updateTask(company, ujStatusz, megjegyzes);
             }
         });
     }

@@ -17,7 +17,7 @@ import java.io.IOException;
 import java.util.List;
 
 public class MainFrame extends JFrame {
-    private TaskController taskController;
+    private CompanyController companyController;
     private AuthController authController;
     private DashboardController dashboardController;
     private NotificationsController notificationsController;
@@ -35,7 +35,7 @@ public class MainFrame extends JFrame {
         Firestore db = initializeFirestore();
         FirestoreService firestoreService = new FirestoreService(db);
         this.authController = new AuthController(firestoreService, LoginView.FELHASZNÁLÓNEVEK, LoginView.JELSZÓ);
-        this.taskController = new TaskController(firestoreService);
+        this.companyController = new CompanyController(firestoreService);
 
         initUI();
     }
@@ -61,7 +61,7 @@ public class MainFrame extends JFrame {
         setLocationRelativeTo(null);
 
         loginView = new LoginView(this);
-        mainView = new MainView(authController, this, taskController);
+        mainView = new MainView(authController, this, companyController);
 
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
@@ -72,7 +72,7 @@ public class MainFrame extends JFrame {
         mainPanel.add(new NotificationsView(notificationsController), "Notifications");
         mainPanel.add(new ReportsView(reportsController), "Reports");
         mainPanel.add(new SettingsView(settingsController), "Settings");
-        mainPanel.add(new TaskView(taskController, new Company()), "Tasks");
+        mainPanel.add(new TaskView(companyController, new Company()), "Tasks");
         mainPanel.add(new UserManagementView(userManagementController), "UserManagement");
 
         add(mainPanel, BorderLayout.CENTER);
@@ -90,7 +90,7 @@ public class MainFrame extends JFrame {
 
     private void loadTasksFromFirestore() {
         try {
-            List<Company> companies = taskController.getAllTasks();
+            List<Company> companies = companyController.getAllTasks();
             mainView.setTasks(companies);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Failed to load tasks from Firestore: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);

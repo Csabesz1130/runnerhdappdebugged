@@ -2,7 +2,7 @@ package org.example.views;
 
 import org.example.MainFrame;
 import org.example.controllers.AuthController;
-import org.example.controllers.TaskController;
+import org.example.controllers.CompanyController;
 import org.example.models.Company;
 
 import javax.swing.*;
@@ -15,7 +15,7 @@ import java.util.List;
 public class MainView extends JPanel {
     private final AuthController authController;
     private final MainFrame mainFrame;
-    private final TaskController taskController;
+    private final CompanyController companyController;
 
     private JComboBox<String> festivalComboBox;
     private JRadioButton installationRadioButton;
@@ -24,10 +24,10 @@ public class MainView extends JPanel {
     private DefaultTableModel companyTableModel;
     private JButton logoutButton;
 
-    public MainView(AuthController authController, MainFrame mainFrame, TaskController taskController) {
+    public MainView(AuthController authController, MainFrame mainFrame, CompanyController companyController) {
         this.authController = authController;
         this.mainFrame = mainFrame;
-        this.taskController = taskController;
+        this.companyController = companyController;
         initComponents();
         loadFestivals();
     }
@@ -104,7 +104,7 @@ public class MainView extends JPanel {
     }
 
     private void loadFestivals() {
-        List<String> festivals = taskController.getFestivals();
+        List<String> festivals = companyController.getFestivals();
         festivalComboBox.removeAllItems();
         for (String festival : festivals) {
             festivalComboBox.addItem(festival);
@@ -126,8 +126,18 @@ public class MainView extends JPanel {
     private void fetchCompanies() {
         String selectedFestival = (String) festivalComboBox.getSelectedItem();
         String collectionName = installationRadioButton.isSelected() ? "Company_Install" : "Company_Demolition";
-        List<Company> companies = taskController.getCompaniesByFestival(collectionName, selectedFestival);
-        setTasks(companies);
+
+        companyController.getCompaniesByFestival(
+                collectionName,
+                selectedFestival,
+                this::setTasks,  // Success callback
+                error -> {
+                    JOptionPane.showMessageDialog(this,
+                            "Error fetching companies: " + error.getMessage(),
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }  // Error callback
+        );
     }
 
     private void updateCompanyTable(List<Company> companies) {

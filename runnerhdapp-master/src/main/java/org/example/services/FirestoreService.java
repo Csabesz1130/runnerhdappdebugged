@@ -1,15 +1,20 @@
 package org.example.services;
 
 import com.google.api.core.ApiFuture;
+import com.google.api.core.ApiFutures;
+import com.google.api.core.ApiFutureCallback;
 import com.google.cloud.firestore.*;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.example.models.Company;
 import org.example.models.User;
+import org.example.models.Comment;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
 
 public class FirestoreService {
     private static final Logger logger = LoggerFactory.getLogger(FirestoreService.class);
@@ -59,40 +64,133 @@ public class FirestoreService {
         loggedInUser = null;
     }
 
-    public void addTask(String collection, Company company) {
+    public void getCompanyById(String companyId, Consumer<Company> onSuccess, Consumer<Exception> onFailure) {
         if (db != null) {
-            db.collection(collection).add(company).addListener(() -> logger.info("Company added successfully."), Runnable::run);
-        } else {
-            logger.error("Firestore is not initialized. Cannot add company.");
-        }
-    }
-
-    public void updateTask(String collection, String id, Company company) {
-        if (db != null) {
-            db.collection(collection).document(id).set(company).addListener(() -> logger.info("Company updated successfully."), Runnable::run);
-        } else {
-            logger.error("Firestore is not initialized. Cannot update company.");
-        }
-    }
-
-    public List<Company> getTasks(String collection) {
-        List<Company> companies = new ArrayList<>();
-        if (db != null) {
-            CollectionReference tasksCollection = db.collection(collection);
-            ApiFuture<QuerySnapshot> future = tasksCollection.get();
-            try {
-                List<QueryDocumentSnapshot> documents = future.get().getDocuments();
-                for (QueryDocumentSnapshot document : documents) {
-                    Company company = document.toObject(Company.class);
-                    companies.add(company);
+            DocumentReference companyDocument = db.collection("companies").document(companyId);
+            ApiFuture<DocumentSnapshot> future = companyDocument.get();
+            ApiFutures.addCallback(future, new ApiFutureCallback<DocumentSnapshot>() {
+                @Override
+                public void onSuccess(DocumentSnapshot document) {
+                    if (document.exists()) {
+                        Company company = document.toObject(Company.class);
+                        onSuccess.accept(company);
+                    } else {
+                        onFailure.accept(new Exception("Company not found"));
+                    }
                 }
-            } catch (InterruptedException | ExecutionException e) {
-                logger.error("Failed to retrieve companies: {}", e.getMessage());
-            }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    onFailure.accept(new Exception(t));
+                }
+            }, MoreExecutors.directExecutor());
         } else {
-            logger.error("Firestore is not initialized. Cannot retrieve companies.");
+            onFailure.accept(new Exception("Firestore is not initialized"));
         }
-        return companies;
+    }
+
+    public void updateCompany(Company company, Runnable onSuccess, Consumer<Exception> onFailure) {
+        if (db != null) {
+            ApiFuture<WriteResult> future = db.collection("companies").document(company.getId()).set(company);
+            ApiFutures.addCallback(future, new ApiFutureCallback<WriteResult>() {
+                @Override
+                public void onSuccess(WriteResult result) {
+                    onSuccess.run();
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    onFailure.accept(new Exception(t));
+                }
+            }, MoreExecutors.directExecutor());
+        } else {
+            onFailure.accept(new Exception("Firestore is not initialized"));
+        }
+    }
+
+    public void deleteCompany(String companyId, Runnable onSuccess, Consumer<Exception> onFailure) {
+        if (db != null) {
+            ApiFuture<WriteResult> future = db.collection("companies").document(companyId).delete();
+            ApiFutures.addCallback(future, new ApiFutureCallback<WriteResult>() {
+                @Override
+                public void onSuccess(WriteResult result) {
+                    onSuccess.run();
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    onFailure.accept(new Exception(t));
+                }
+            }, MoreExecutors.directExecutor());
+        } else {
+            onFailure.accept(new Exception("Firestore is not initialized"));
+        }
+    }
+
+    public void addComment(String companyId, Comment comment, Runnable onSuccess, Consumer<Exception> onFailure) {
+        if (db != null) {
+            ApiFuture<WriteResult> future = db.collection("companies").document(companyId)
+                    .update("comments", FieldValue.arrayUnion(comment));
+            ApiFutures.addCallback(future, new ApiFutureCallback<WriteResult>() {
+                @Override
+                public void onSuccess(WriteResult result) {
+                    onSuccess.run();
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    onFailure.accept(new Exception(t));
+                }
+            }, MoreExecutors.directExecutor());
+        } else {
+            onFailure.accept(new Exception("Firestore is not initialized"));
+        }
+    }
+
+    public void addCompanyListener(String companyId, Consumer<Company> onUpdate, Consumer<Exception> onError) {
+        if (db != null) {
+            db.collection("companies").document(companyId)
+                    .addSnapshotListener((snapshot, e) -> {
+                        if (e != null) {
+                            onError.accept(e);
+                            return;
+                        }
+
+                        if (snapshot != null && snapshot.exists()) {
+                            Company company = snapshot.toObject(Company.class);
+                            onUpdate.accept(company);
+                        } else {
+                            onError.accept(new Exception("Company does not exist"));
+                        }
+                    });
+        } else {
+            onError.accept(new Exception("Firestore is not initialized"));
+        }
+    }
+
+    public void getCompaniesByFestival(String collectionName, String festivalName, Consumer<List<Company>> onSuccess, Consumer<Exception> onFailure) {
+        if (db != null) {
+            ApiFuture<QuerySnapshot> future = db.collection(collectionName)
+                    .whereEqualTo("ProgramName", festivalName)
+                    .get();
+            ApiFutures.addCallback(future, new ApiFutureCallback<QuerySnapshot>() {
+                @Override
+                public void onSuccess(QuerySnapshot querySnapshot) {
+                    List<Company> companies = new ArrayList<>();
+                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                        companies.add(document.toObject(Company.class));
+                    }
+                    onSuccess.accept(companies);
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    onFailure.accept(new Exception(t));
+                }
+            }, MoreExecutors.directExecutor());
+        } else {
+            onFailure.accept(new Exception("Firestore is not initialized"));
+        }
     }
 
     public List<String> getFestivals() {
@@ -114,50 +212,42 @@ public class FirestoreService {
         return festivals;
     }
 
-    public List<Company> getCompaniesByFestival(String collectionName, String festivalName) {
-        List<Company> companies = new ArrayList<>();
+    public void createCompany(String collectionName, Company company, Runnable onSuccess, Consumer<Exception> onFailure) {
         if (db != null) {
-            //collectionName = "Company_Install";
-            CollectionReference companiesCollection = db.collection(collectionName);
-            Query query = companiesCollection.whereEqualTo("ProgramName", festivalName);
-            ApiFuture<QuerySnapshot> future = query.get();
-            try {
-                List<QueryDocumentSnapshot> documents = future.get().getDocuments();
-                for (QueryDocumentSnapshot document : documents) {
-                    Company company = document.toObject(Company.class);
-                    companies.add(company);
+            ApiFuture<WriteResult> future = db.collection(collectionName).document(company.getId()).set(company);
+            ApiFutures.addCallback(future, new ApiFutureCallback<WriteResult>() {
+                @Override
+                public void onSuccess(WriteResult result) {
+                    onSuccess.run();
                 }
-            } catch (InterruptedException | ExecutionException e) {
-                logger.error("Failed to retrieve companies: {}", e.getMessage());
-            }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    onFailure.accept(new Exception(t));
+                }
+            }, MoreExecutors.directExecutor());
         } else {
-            logger.error("Firestore is not initialized. Cannot retrieve companies.");
+            onFailure.accept(new Exception("Firestore is not initialized"));
         }
-        return companies;
     }
 
-    public Company getCompanyById(String collectionName, String companyId) {
+    public void updateEquipmentList(String collectionName, String companyId, List<Company.Equipment> equipmentList, Runnable onSuccess, Consumer<Exception> onFailure) {
         if (db != null) {
-            DocumentReference companyDocument = db.collection(collectionName).document(companyId);
-            try {
-                DocumentSnapshot documentSnapshot = companyDocument.get().get();
-                if (documentSnapshot.exists()) {
-                    return documentSnapshot.toObject(Company.class);
+            ApiFuture<WriteResult> future = db.collection(collectionName).document(companyId)
+                    .update("equipmentList", equipmentList);
+            ApiFutures.addCallback(future, new ApiFutureCallback<WriteResult>() {
+                @Override
+                public void onSuccess(WriteResult result) {
+                    onSuccess.run();
                 }
-            } catch (Exception e) {
-                logger.error("Error retrieving company: {}", e.getMessage());
-            }
-        } else {
-            logger.error("Firestore is not initialized. Cannot retrieve company.");
-        }
-        return null;
-    }
 
-    public void createCompany(String collectionName, Company company) {
-        if (db != null) {
-            db.collection(collectionName).document(company.getId()).set(company).addListener(() -> logger.info("Company created successfully."), Runnable::run);
+                @Override
+                public void onFailure(Throwable t) {
+                    onFailure.accept(new Exception(t));
+                }
+            }, MoreExecutors.directExecutor());
         } else {
-            logger.error("Firestore is not initialized. Cannot create company.");
+            onFailure.accept(new Exception("Firestore is not initialized"));
         }
     }
 
@@ -182,12 +272,32 @@ public class FirestoreService {
         return equipmentList;
     }
 
-    public void updateEquipmentList(String collectionName, String companyId, List<Company.Equipment> equipmentList) {
+    public void getAllCompanies(Consumer<List<Company>> onSuccess, Consumer<Exception> onFailure) {
         if (db != null) {
-            db.collection(collectionName).document(companyId).update("equipmentList", equipmentList)
-                    .addListener(() -> logger.info("Equipment list updated successfully."), Runnable::run);
+            ApiFuture<QuerySnapshot> future = db.collection("companies").get();
+            ApiFutures.addCallback(future, new ApiFutureCallback<QuerySnapshot>() {
+                @Override
+                public void onSuccess(QuerySnapshot querySnapshot) {
+                    List<Company> companies = new ArrayList<>();
+                    for (DocumentSnapshot document : querySnapshot.getDocuments()) {
+                        Company company = document.toObject(Company.class);
+                        if (company != null) {
+                            companies.add(company);
+                        }
+                    }
+                    logger.info("Successfully retrieved {} companies", companies.size());
+                    onSuccess.accept(companies);
+                }
+
+                @Override
+                public void onFailure(Throwable t) {
+                    logger.error("Error retrieving companies", t);
+                    onFailure.accept(new Exception("Failed to retrieve companies", t));
+                }
+            }, MoreExecutors.directExecutor());
         } else {
-            logger.error("Firestore is not initialized. Cannot update equipment list.");
+            logger.error("Firestore is not initialized");
+            onFailure.accept(new Exception("Firestore is not initialized"));
         }
     }
 }
