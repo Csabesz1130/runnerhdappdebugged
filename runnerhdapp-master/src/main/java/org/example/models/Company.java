@@ -3,11 +3,11 @@ package org.example.models;
 import com.google.cloud.firestore.annotation.PropertyName;
 import java.util.List;
 import com.google.cloud.Timestamp;
-import java.util.HashMap;
+
 import java.util.Map;
 
 
-public class Task {
+public class Company {
     private String id;
     private String programName;
     private Timestamp lastModified;

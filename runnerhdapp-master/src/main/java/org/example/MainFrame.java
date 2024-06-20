@@ -6,7 +6,7 @@ import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import com.google.firebase.cloud.FirestoreClient;
 import org.example.controllers.*;
-import org.example.models.Task;
+import org.example.models.Company;
 import org.example.services.FirestoreService;
 import org.example.views.*;
 
@@ -72,7 +72,7 @@ public class MainFrame extends JFrame {
         mainPanel.add(new NotificationsView(notificationsController), "Notifications");
         mainPanel.add(new ReportsView(reportsController), "Reports");
         mainPanel.add(new SettingsView(settingsController), "Settings");
-        mainPanel.add(new TaskView(taskController, new Task()), "Tasks");
+        mainPanel.add(new TaskView(taskController, new Company()), "Tasks");
         mainPanel.add(new UserManagementView(userManagementController), "UserManagement");
 
         add(mainPanel, BorderLayout.CENTER);
@@ -90,8 +90,8 @@ public class MainFrame extends JFrame {
 
     private void loadTasksFromFirestore() {
         try {
-            List<Task> tasks = taskController.getAllTasks();
-            mainView.setTasks(tasks);
+            List<Company> companies = taskController.getAllTasks();
+            mainView.setTasks(companies);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Failed to load tasks from Firestore: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
         }

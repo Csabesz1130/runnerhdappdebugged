@@ -1,7 +1,7 @@
 package org.example.views;
 
 import org.example.controllers.TaskController;
-import org.example.models.Task;
+import org.example.models.Company;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,14 +78,14 @@ public class CompanyDetailsView extends JPanel {
         );
     }
 
-    private void displayCompanyDetails(Task company) {
+    private void displayCompanyDetails(Company company) {
         SwingUtilities.invokeLater(() -> {
             nameLabel.setText(company.getCompanyName());
             lastModifiedLabel.setText(company.getLastModified() != null ? company.getLastModified().toString() : "N/A");
             programLabel.setText(company.getProgramName());
 
             StringBuilder equipmentText = new StringBuilder();
-            for (Task.Equipment equipment : company.getEquipmentList()) {
+            for (Company.Equipment equipment : company.getEquipmentList()) {
                 equipmentText.append(equipment.getName())
                         .append(" - Quantity: ")
                         .append(equipment.getQuantity())

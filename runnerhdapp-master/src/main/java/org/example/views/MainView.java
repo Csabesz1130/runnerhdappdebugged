@@ -3,7 +3,7 @@ package org.example.views;
 import org.example.MainFrame;
 import org.example.controllers.AuthController;
 import org.example.controllers.TaskController;
-import org.example.models.Task;
+import org.example.models.Company;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -114,9 +114,9 @@ public class MainView extends JPanel {
         }
     }
 
-    public void setTasks(List<Task> companies) {
+    public void setTasks(List<Company> companies) {
         companyTableModel.setRowCount(0);
-        for (Task company : companies) {
+        for (Company company : companies) {
             Object[] rowData = {company.getId(), company.getCompanyName(), company.getLastModified(), company.getProgramName()};
             companyTableModel.addRow(rowData);
         }
@@ -126,13 +126,13 @@ public class MainView extends JPanel {
     private void fetchCompanies() {
         String selectedFestival = (String) festivalComboBox.getSelectedItem();
         String collectionName = installationRadioButton.isSelected() ? "Company_Install" : "Company_Demolition";
-        List<Task> companies = taskController.getCompaniesByFestival(collectionName, selectedFestival);
+        List<Company> companies = taskController.getCompaniesByFestival(collectionName, selectedFestival);
         setTasks(companies);
     }
 
-    private void updateCompanyTable(List<Task> companies) {
+    private void updateCompanyTable(List<Company> companies) {
         companyTableModel.setRowCount(0);
-        for (Task company : companies) {
+        for (Company company : companies) {
             Object[] rowData = {company.getId(), company.getCompanyName(), company.getLastModified(), company.getProgramName()};
             companyTableModel.addRow(rowData);
         }

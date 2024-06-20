@@ -1,7 +1,7 @@
 package org.example.views;
 
 import org.example.controllers.TaskController;
-import org.example.models.Task;
+import org.example.models.Company;
 
 import javax.swing.*;
 import java.awt.*;
@@ -10,7 +10,7 @@ import java.awt.event.ActionListener;
 
 public class TaskView extends JPanel {
     private TaskController taskController;
-    private Task task;
+    private Company company;
 
     private JLabel telephelyLabel;
     private JLabel statuszLabel;
@@ -18,9 +18,9 @@ public class TaskView extends JPanel {
     private JTextArea megjegyzesTextArea;
     private JButton frissitesButton;
 
-    public TaskView(TaskController taskController, Task task) {
+    public TaskView(TaskController taskController, Company company) {
         this.taskController = taskController;
-        this.task = task;
+        this.company = company;
         initComponents();
     }
 
@@ -28,7 +28,7 @@ public class TaskView extends JPanel {
         setLayout(new BorderLayout());
 
         JPanel infoPanel = new JPanel(new GridLayout(3, 2));
-        telephelyLabel = new JLabel("Telephely: " + task.getCompanyName());
+        telephelyLabel = new JLabel("Telephely: " + company.getCompanyName());
         statuszLabel = new JLabel("Státusz:");
         statuszComboBox = new JComboBox<>(new String[]{"Felderítés", "Telepíthető", "Kirakható", "Nem rakható ki"});
         megjegyzesTextArea = new JTextArea(5, 20);
@@ -49,7 +49,7 @@ public class TaskView extends JPanel {
             public void actionPerformed(ActionEvent e) {
                 String ujStatusz = (String) statuszComboBox.getSelectedItem();
                 String megjegyzes = megjegyzesTextArea.getText();
-                taskController.updateTask(task, ujStatusz, megjegyzes);
+                taskController.updateTask(company, ujStatusz, megjegyzes);
             }
         });
     }
