@@ -7,8 +7,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class CompanyController {
     private static final Logger logger = LoggerFactory.getLogger(CompanyController.class);
@@ -54,28 +55,56 @@ public class CompanyController {
         firestoreService.updateEquipmentList(collectionName, companyId, equipmentList, onSuccess, onFailure);
     }
 
-    public List<Company> getAllTasks() {
-        CompletableFuture<List<Company>> future = new CompletableFuture<>();
-
-        firestoreService.getAllCompanies(
-                companies -> {
-                    logger.info("Successfully retrieved {} companies", companies.size());
-                    future.complete(companies);
-                },
-                exception -> {
-                    logger.error("Error retrieving companies", exception);
-                    future.completeExceptionally(exception);
-                }
-        );
-
-        try {
-            return future.get(); // This will block until the future is completed
-        } catch (Exception e) {
-            logger.error("Error while waiting for companies", e);
-            throw new RuntimeException("Failed to retrieve companies", e);
-        }
+    public void getAllCompanies(Consumer<List<Company>> onSuccess, Consumer<Exception> onFailure) {
+        firestoreService.getAllCompanies(onSuccess, onFailure);
     }
 
-    public void updateTask(Company company, String ujStatusz, String megjegyzes) {
+    public void updateCompanyStatus(String companyId, String newStatus, String comment, Runnable onSuccess, Consumer<Exception> onFailure) {
+        getCompanyById(companyId,
+                company -> {
+                    company.addDynamicField("status", newStatus);
+                    Comment statusComment = new Comment(comment, "System");
+                    company.addComment(statusComment);
+                    updateCompany(company, onSuccess, onFailure);
+                },
+                onFailure
+        );
+    }
+
+    public void searchCompanies(String query, Consumer<List<Company>> onSuccess, Consumer<Exception> onFailure) {
+        final String searchQuery = query.toLowerCase(); // Create an effectively final copy
+        getAllCompanies(
+                companies -> {
+                    List<Company> searchResults = companies.stream()
+                            .filter(company -> matchesSearch(company, searchQuery))
+                            .collect(Collectors.toList());
+                    onSuccess.accept(searchResults);
+                },
+                onFailure
+        );
+    }
+
+    private boolean matchesSearch(Company company, String query) {
+        return (company.getId() != null && company.getId().toLowerCase().contains(query)) ||
+                (company.getCompanyName() != null && company.getCompanyName().toLowerCase().contains(query)) ||
+                (company.getProgramName() != null && company.getProgramName().toLowerCase().contains(query)) ||
+                (company.getEquipmentList() != null && company.getEquipmentList().stream()
+                        .anyMatch(equipment -> equipment.getSnDid() != null && equipment.getSnDid().toLowerCase().contains(query)));
+    }
+
+    public void updateTask(Company company, String newStatus, String comment) {
+        company.addDynamicField("status", newStatus);
+        Comment newComment = new Comment(comment, "System");
+        company.addComment(newComment);
+        updateCompany(company, () -> {}, e -> logger.error("Error updating task", e));
+    }
+
+    public List<Company> getAllTasks() {
+        AtomicReference<List<Company>> result = new AtomicReference<>();
+        getAllCompanies(
+                result::set,
+                e -> logger.error("Error getting all tasks", e)
+        );
+        return result.get();
     }
 }

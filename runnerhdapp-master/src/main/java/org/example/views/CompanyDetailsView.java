@@ -1,5 +1,6 @@
 package org.example.views;
 
+import org.example.MainFrame;
 import org.example.controllers.CompanyController;
 import org.example.models.Company;
 import org.example.models.Comment;
@@ -8,17 +9,14 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.List;
 
 public class CompanyDetailsView extends JPanel {
     private static final Logger logger = LoggerFactory.getLogger(CompanyDetailsView.class);
     private final CompanyController companyController;
-    private final String companyId;
+    private final MainFrame mainFrame;
     private Company company;
 
-    // UI components
     private JTextField companyNameField;
     private JTextField programNameField;
     private JComboBox<String> felderitesComboBox;
@@ -29,20 +27,23 @@ public class CompanyDetailsView extends JPanel {
     private JLabel lastModifiedLabel;
     private JTextArea commentsArea;
     private JTextField newCommentField;
-    private JButton addCommentButton, editButton, saveButton, cancelButton, deleteButton, refreshButton;
+    private JButton addCommentButton, editButton, saveButton, cancelButton, deleteButton, refreshButton, backButton;
 
-    public CompanyDetailsView(CompanyController companyController, String companyId) {
+    public CompanyDetailsView(CompanyController companyController, MainFrame mainFrame) {
         this.companyController = companyController;
-        this.companyId = companyId;
+        this.mainFrame = mainFrame;
         initComponents();
-        fetchCompanyDetails();
-        setupRealTimeListener();
+    }
+
+    public void setCompany(Company company) {
+        this.company = company;
+        displayCompanyDetails();
     }
 
     private void initComponents() {
         setLayout(new BorderLayout());
+        setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Main details panel
         JPanel detailsPanel = new JPanel(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
@@ -50,14 +51,12 @@ public class CompanyDetailsView extends JPanel {
         gbc.anchor = GridBagConstraints.WEST;
         gbc.insets = new Insets(5, 5, 5, 5);
 
-        // Add components to detailsPanel
-        addLabelAndComponent(detailsPanel, gbc, "Company ID:", new JLabel(companyId));
         companyNameField = addLabelAndTextField(detailsPanel, gbc, "Company Name:");
         programNameField = addLabelAndTextField(detailsPanel, gbc, "Program Name:");
         felderitesComboBox = addLabelAndComboBox(detailsPanel, gbc, "Felderites:",
                 new String[]{"TELEPÍTHETŐ", "KIRAKHATÓ", "NEM KIRAKHATÓ"});
         telepitesComboBox = addLabelAndComboBox(detailsPanel, gbc, "Telepites:",
-                new String[]{"KIADVA", "OPTION1", "OPTION2"}); // Add actual options
+                new String[]{"KIADVA", "OPTION1", "OPTION2"});
         elosztoCheckBox = addCheckBox(detailsPanel, gbc, "Eloszto");
         aramCheckBox = addCheckBox(detailsPanel, gbc, "Aram");
         halozatCheckBox = addCheckBox(detailsPanel, gbc, "Halozat");
@@ -66,11 +65,10 @@ public class CompanyDetailsView extends JPanel {
         paramCheckBox = addCheckBox(detailsPanel, gbc, "Param");
         helyszinCheckBox = addCheckBox(detailsPanel, gbc, "Helyszin");
         bontasComboBox = addLabelAndComboBox(detailsPanel, gbc, "Bontas:",
-                new String[]{"BONTHATÓ", "OPTION1", "OPTION2"}); // Add actual options
+                new String[]{"BONTHATÓ", "OPTION1", "OPTION2"});
         bazisLeszerelesCheckBox = addCheckBox(detailsPanel, gbc, "Bazis Leszereles");
         lastModifiedLabel = addLabelAndComponent(detailsPanel, gbc, "Last Modified:", new JLabel());
 
-        // Comments section
         JPanel commentsPanel = new JPanel(new BorderLayout());
         commentsArea = new JTextArea(10, 30);
         commentsArea.setEditable(false);
@@ -84,28 +82,25 @@ public class CompanyDetailsView extends JPanel {
         addCommentPanel.add(addCommentButton, BorderLayout.EAST);
         commentsPanel.add(addCommentPanel, BorderLayout.SOUTH);
 
-        // Action buttons
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         editButton = new JButton("Edit");
         saveButton = new JButton("Save Changes");
         cancelButton = new JButton("Cancel");
         deleteButton = new JButton("Delete Company");
         refreshButton = new JButton("Refresh");
+        backButton = new JButton("Back");
         buttonPanel.add(editButton);
         buttonPanel.add(saveButton);
         buttonPanel.add(cancelButton);
         buttonPanel.add(deleteButton);
         buttonPanel.add(refreshButton);
+        buttonPanel.add(backButton);
 
-        // Add all panels to main panel
         add(detailsPanel, BorderLayout.NORTH);
         add(commentsPanel, BorderLayout.CENTER);
         add(buttonPanel, BorderLayout.SOUTH);
 
-        // Set up action listeners
         setupActionListeners();
-
-        // Initially disable editing
         setEditingEnabled(false);
     }
 
@@ -114,16 +109,12 @@ public class CompanyDetailsView extends JPanel {
         saveButton.addActionListener(e -> saveChanges());
         cancelButton.addActionListener(e -> cancelChanges());
         deleteButton.addActionListener(e -> deleteCompany());
-        refreshButton.addActionListener(e -> fetchCompanyDetails());
+        refreshButton.addActionListener(e -> refreshCompanyDetails());
         addCommentButton.addActionListener(e -> addComment());
+        backButton.addActionListener(e -> goBack());
     }
 
-    private void fetchCompanyDetails() {
-        companyController.getCompanyById(companyId, this::displayCompanyDetails, this::handleError);
-    }
-
-    private void displayCompanyDetails(Company company) {
-        this.company = company;
+    private void displayCompanyDetails() {
         SwingUtilities.invokeLater(() -> {
             companyNameField.setText(company.getCompanyName());
             programNameField.setText(company.getProgramName());
@@ -176,14 +167,18 @@ public class CompanyDetailsView extends JPanel {
 
     private void saveChanges() {
         updateCompanyFromUI();
-        companyController.updateCompany(company, () -> {
-            JOptionPane.showMessageDialog(this, "Changes saved successfully");
-            setEditingEnabled(false);
-        }, this::handleError);
+        companyController.updateCompany(company,
+                () -> {
+                    JOptionPane.showMessageDialog(this, "Changes saved successfully");
+                    setEditingEnabled(false);
+                    mainFrame.refreshMainView();
+                },
+                error -> handleError("Error saving changes", error)
+        );
     }
 
     private void cancelChanges() {
-        displayCompanyDetails(company);
+        displayCompanyDetails();
         setEditingEnabled(false);
     }
 
@@ -192,10 +187,14 @@ public class CompanyDetailsView extends JPanel {
                 "Are you sure you want to delete this company?", "Confirm Deletion",
                 JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
-            companyController.deleteCompany(companyId, () -> {
-                JOptionPane.showMessageDialog(this, "Company deleted successfully");
-                // TODO: Close this view and update the main view
-            }, this::handleError);
+            companyController.deleteCompany(company.getId(),
+                    () -> {
+                        JOptionPane.showMessageDialog(this, "Company deleted successfully");
+                        mainFrame.refreshMainView();
+                        goBack();
+                    },
+                    error -> handleError("Error deleting company", error)
+            );
         }
     }
 
@@ -209,9 +208,19 @@ public class CompanyDetailsView extends JPanel {
                         displayComments(company.getComments());
                         newCommentField.setText("");
                     },
-                    this::handleError
+                    error -> handleError("Error adding comment", error)
             );
         }
+    }
+
+    private void refreshCompanyDetails() {
+        companyController.getCompanyById(company.getId(),
+                updatedCompany -> {
+                    this.company = updatedCompany;
+                    displayCompanyDetails();
+                },
+                error -> handleError("Error refreshing company details", error)
+        );
     }
 
     private void updateCompanyFromUI() {
@@ -230,17 +239,16 @@ public class CompanyDetailsView extends JPanel {
         company.setBazisLeszereles(bazisLeszerelesCheckBox.isSelected());
     }
 
-    private void setupRealTimeListener() {
-        companyController.addCompanyListener(companyId, this::displayCompanyDetails, this::handleError);
+    private void goBack() {
+        mainFrame.showMainView();
     }
 
-    private void handleError(Exception e) {
-        logger.error("An error occurred", e);
-        JOptionPane.showMessageDialog(this, "An error occurred: " + e.getMessage(),
+    private void handleError(String context, Exception e) {
+        logger.error("{}: {}", context, e.getMessage());
+        JOptionPane.showMessageDialog(this, context + ": " + e.getMessage(),
                 "Error", JOptionPane.ERROR_MESSAGE);
     }
 
-    // Helper methods for adding components
     private JTextField addLabelAndTextField(JPanel panel, GridBagConstraints gbc, String labelText) {
         JLabel label = new JLabel(labelText);
         JTextField textField = new JTextField(20);

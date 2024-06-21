@@ -23,7 +23,7 @@ public class LoginView extends JPanel {
     private JPasswordField jelszóPasswordField;
     private JButton bejelentkezésButton;
 
-    public LoginView(MainFrame mainFrame) {
+    public LoginView(AuthController authController, MainFrame mainFrame) {
         // Initialize Firestore
         Firestore firestore = FirestoreClient.getFirestore();
 
@@ -41,7 +41,7 @@ public class LoginView extends JPanel {
                 String felhasználónév = (String) felhasználónévComboBox.getSelectedItem();
                 String jelszó = new String(jelszóPasswordField.getPassword());
 
-                if (authController.login(felhasználónév, jelszó)) {
+                if (LoginView.this.authController.login(felhasználónév, jelszó)) {
                     JOptionPane.showMessageDialog(null, "Sikeres bejelentkezés!");
                     mainFrame.showMainView(); // Call showMainView() after successful login
                 } else {

@@ -26,6 +26,7 @@ public class MainFrame extends JFrame {
     private SettingsController settingsController;
     private LoginView loginView;
     private MainView mainView;
+    private CompanyDetailsView companyDetailsView;
     private JMenuBar menuBar;
 
     private CardLayout cardLayout;
@@ -60,14 +61,16 @@ public class MainFrame extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        loginView = new LoginView(this);
-        mainView = new MainView(authController, this, companyController);
-
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
 
+        loginView = new LoginView(authController, this);
+        mainView = new MainView(authController, this, companyController);
+        companyDetailsView = new CompanyDetailsView(companyController, this);
+
         mainPanel.add(loginView, "Login");
         mainPanel.add(mainView, "MainView");
+        mainPanel.add(companyDetailsView, "CompanyDetailsView");
         mainPanel.add(new DashboardView(dashboardController), "Dashboard");
         mainPanel.add(new NotificationsView(notificationsController), "Notifications");
         mainPanel.add(new ReportsView(reportsController), "Reports");
@@ -84,17 +87,17 @@ public class MainFrame extends JFrame {
 
     public void showMainView() {
         showView("MainView");
-        loadTasksFromFirestore();
+        mainView.loadFestivals();
         initMenuBar();
     }
 
-    private void loadTasksFromFirestore() {
-        try {
-            List<Company> companies = companyController.getAllTasks();
-            mainView.setTasks(companies);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Failed to load tasks from Firestore: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-        }
+    public void showCompanyDetails(Company company) {
+        companyDetailsView.setCompany(company);
+        showView("CompanyDetailsView");
+    }
+
+    public void refreshMainView() {
+        mainView.refresh();
     }
 
     private void initMenuBar() {

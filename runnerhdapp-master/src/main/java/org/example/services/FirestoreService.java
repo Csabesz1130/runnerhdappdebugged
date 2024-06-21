@@ -6,8 +6,8 @@ import com.google.api.core.ApiFutureCallback;
 import com.google.cloud.firestore.*;
 import com.google.common.util.concurrent.MoreExecutors;
 import org.example.models.Company;
-import org.example.models.User;
 import org.example.models.Comment;
+import org.example.models.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,8 +66,8 @@ public class FirestoreService {
 
     public void getCompanyById(String companyId, Consumer<Company> onSuccess, Consumer<Exception> onFailure) {
         if (db != null) {
-            DocumentReference companyDocument = db.collection("companies").document(companyId);
-            ApiFuture<DocumentSnapshot> future = companyDocument.get();
+            DocumentReference docRef = db.collection("companies").document(companyId);
+            ApiFuture<DocumentSnapshot> future = docRef.get();
             ApiFutures.addCallback(future, new ApiFutureCallback<DocumentSnapshot>() {
                 @Override
                 public void onSuccess(DocumentSnapshot document) {
@@ -251,27 +251,6 @@ public class FirestoreService {
         }
     }
 
-    public List<Company.Equipment> getEquipmentList(String collectionName, String companyId) {
-        List<Company.Equipment> equipmentList = new ArrayList<>();
-        if (db != null) {
-            DocumentReference companyDocument = db.collection(collectionName).document(companyId);
-            try {
-                DocumentSnapshot documentSnapshot = companyDocument.get().get();
-                if (documentSnapshot.exists()) {
-                    Company company = documentSnapshot.toObject(Company.class);
-                    if (company != null) {
-                        equipmentList = company.getEquipmentList();
-                    }
-                }
-            } catch (Exception e) {
-                logger.error("Error retrieving equipment list: {}", e.getMessage());
-            }
-        } else {
-            logger.error("Firestore is not initialized. Cannot retrieve equipment list.");
-        }
-        return equipmentList;
-    }
-
     public void getAllCompanies(Consumer<List<Company>> onSuccess, Consumer<Exception> onFailure) {
         if (db != null) {
             ApiFuture<QuerySnapshot> future = db.collection("companies").get();
@@ -280,23 +259,17 @@ public class FirestoreService {
                 public void onSuccess(QuerySnapshot querySnapshot) {
                     List<Company> companies = new ArrayList<>();
                     for (DocumentSnapshot document : querySnapshot.getDocuments()) {
-                        Company company = document.toObject(Company.class);
-                        if (company != null) {
-                            companies.add(company);
-                        }
+                        companies.add(document.toObject(Company.class));
                     }
-                    logger.info("Successfully retrieved {} companies", companies.size());
                     onSuccess.accept(companies);
                 }
 
                 @Override
                 public void onFailure(Throwable t) {
-                    logger.error("Error retrieving companies", t);
-                    onFailure.accept(new Exception("Failed to retrieve companies", t));
+                    onFailure.accept(new Exception(t));
                 }
             }, MoreExecutors.directExecutor());
         } else {
-            logger.error("Firestore is not initialized");
             onFailure.accept(new Exception("Firestore is not initialized"));
         }
     }
