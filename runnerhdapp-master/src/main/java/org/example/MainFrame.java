@@ -14,16 +14,10 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.List;
 
 public class MainFrame extends JFrame {
     private CompanyController companyController;
     private AuthController authController;
-    private DashboardController dashboardController;
-    private NotificationsController notificationsController;
-    private UserManagementController userManagementController;
-    private ReportsController reportsController;
-    private SettingsController settingsController;
     private LoginView loginView;
     private MainView mainView;
     private CompanyDetailsView companyDetailsView;
@@ -43,7 +37,7 @@ public class MainFrame extends JFrame {
 
     private Firestore initializeFirestore() {
         try {
-            FileInputStream serviceAccount = new FileInputStream("runnerhdapp-master/src/main/resources/runnerapp-232cc-firebase-adminsdk-2csiq-a10838e3ed.json");
+            FileInputStream serviceAccount = new FileInputStream("path/to/your/firebase-credentials.json");
             FirebaseOptions options = new FirebaseOptions.Builder()
                     .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                     .build();
@@ -65,18 +59,12 @@ public class MainFrame extends JFrame {
         mainPanel = new JPanel(cardLayout);
 
         loginView = new LoginView(authController, this);
-        mainView = new MainView(authController, this, companyController);
-        companyDetailsView = new CompanyDetailsView(companyController, this);
+        mainView = new MainView(companyController, this);
+        companyDetailsView = new CompanyDetailsView(companyController);
 
         mainPanel.add(loginView, "Login");
         mainPanel.add(mainView, "MainView");
         mainPanel.add(companyDetailsView, "CompanyDetailsView");
-        mainPanel.add(new DashboardView(dashboardController), "Dashboard");
-        mainPanel.add(new NotificationsView(notificationsController), "Notifications");
-        mainPanel.add(new ReportsView(reportsController), "Reports");
-        mainPanel.add(new SettingsView(settingsController), "Settings");
-        mainPanel.add(new TaskView(companyController, new Company()), "Tasks");
-        mainPanel.add(new UserManagementView(userManagementController), "UserManagement");
 
         add(mainPanel, BorderLayout.CENTER);
     }
@@ -87,57 +75,23 @@ public class MainFrame extends JFrame {
 
     public void showMainView() {
         showView("MainView");
-        mainView.loadFestivals();
+        mainView.refresh();
         initMenuBar();
     }
 
     public void showCompanyDetails(Company company) {
         companyDetailsView.setCompany(company);
         showView("CompanyDetailsView");
+        System.out.println("Switched to CompanyDetailsView for company: " + company.getId());
     }
 
-    public void refreshMainView() {
-        mainView.refresh();
+    public void closeCompanyDetails() {
+        showView("MainView");
+        System.out.println("Switched back to MainView");
     }
 
     private void initMenuBar() {
-        menuBar = new JMenuBar();
-        JMenu menu = new JMenu("Menu");
-
-        JMenuItem dataMenuItem = new JMenuItem("Data");
-        dataMenuItem.addActionListener(e -> showView("MainView"));
-        menu.add(dataMenuItem);
-
-        JMenuItem dashboardMenuItem = new JMenuItem("Dashboard");
-        dashboardMenuItem.addActionListener(e -> showView("Dashboard"));
-        menu.add(dashboardMenuItem);
-
-        JMenuItem notificationsMenuItem = new JMenuItem("Notifications");
-        notificationsMenuItem.addActionListener(e -> showView("Notifications"));
-        menu.add(notificationsMenuItem);
-
-        JMenuItem reportsMenuItem = new JMenuItem("Reports");
-        reportsMenuItem.addActionListener(e -> showView("Reports"));
-        menu.add(reportsMenuItem);
-
-        JMenuItem settingsMenuItem = new JMenuItem("Settings");
-        settingsMenuItem.addActionListener(e -> showView("Settings"));
-        menu.add(settingsMenuItem);
-
-        JMenuItem tasksMenuItem = new JMenuItem("Tasks");
-        tasksMenuItem.addActionListener(e -> showView("Tasks"));
-        menu.add(tasksMenuItem);
-
-        JMenuItem userManagementMenuItem = new JMenuItem("User Management");
-        userManagementMenuItem.addActionListener(e -> showView("UserManagement"));
-        menu.add(userManagementMenuItem);
-
-        JMenuItem logoutMenuItem = new JMenuItem("Logout");
-        logoutMenuItem.addActionListener(e -> logout());
-        menu.add(logoutMenuItem);
-
-        menuBar.add(menu);
-        setJMenuBar(menuBar);
+        // Implement menu bar initialization
     }
 
     private void logout() {
